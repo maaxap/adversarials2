@@ -35,13 +35,8 @@ class Dataset(object):
     self.labels_map = labels_map
     self.is_shuffled = False
     self.batch_size = None
-
-    if add_filenames:
-      self.dataset = tf.data.Dataset.from_tensor_slices(
-        (flat_images_list, flat_images_list, flat_labels_list))
-    else:
-      self.dataset = tf.data.Dataset.from_tensor_slices(
-        (flat_images_list, flat_labels_list))
+    self.dataset = tf.data.Dataset.from_tensor_slices(
+      (flat_images_list, flat_images_list, flat_labels_list))
 
 
 def make_dataset(datadir, batch_size, preprocess_func=None,
@@ -54,8 +49,8 @@ def make_dataset(datadir, batch_size, preprocess_func=None,
 
   # Convert labels to OHE
   num_classes = len(dataset.labels_map)
-  def labels_to_one_hot(x, y):
-    return x, tf.one_hot(y, num_classes)
+  def labels_to_one_hot(f, x, y):
+    return f, x, tf.one_hot(y, num_classes)
   dataset.dataset = dataset.dataset.map(labels_to_one_hot)
 
   if shuffle is True:
