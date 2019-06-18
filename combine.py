@@ -16,6 +16,9 @@ if __name__ == '__main__':
       continue
 
     tokens = filename.split('_')
+    
+    if len(tokens) != 4:
+      continue
 
     if len(tokens) != 4:
       continue

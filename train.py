@@ -1,0 +1,164 @@
+import math
+import os
+import argparse
+import numpy as np
+import tensorflow as tf
+from cleverhans.loss import CrossEntropy
+from cleverhans.attacks import FastGradientMethod
+
+from data import make_dataset, read_image
+from data import decode_png, resize
+from util import init_logger
+from model import InceptionV3
+
+
+def eval_acc(sess, logits, labels, num_batches, is_training, dataset_init_op):
+  sess.run(dataset_init_op)
+
+  pred = tf.equal(tf.to_int32(tf.argmax(logits, 1)), labels)
+
+  num_correct, num_samples = 0, 0
+  for batch in range(num_batches):
+    pred_val = sess.run(pred, {is_training: False})
+    num_correct += pred_val.sum()
+    num_samples += pred_val.shape[0]
+
+  acc = num_correct / num_samples
+  return acc
+
+
+def main(args):
+  logger = init_logger(args.run_name)
+
+  # Datasets
+  img_height, img_width, _ = InceptionV3.SHAPE
+
+  def prep_func(f, x, y):
+    x = read_image(x)
+    x = decode_png(x)
+    x = resize(x, img_height, img_width)
+    return f, x, y
+
+  trn_ds = make_dataset(args.train_dir, args.batch_size, prep_func,
+                        shuffle=True, repeat=True, add_filenames=True)
+  val_ds = make_dataset(args.train_dir, args.batch_size, prep_func,
+                        shuffle=False, repeat=False, add_filenames=True)
+  tst_ds = make_dataset(args.train_dir, args.batch_size, prep_func,
+                        shuffle=False, repeat=False, add_filenames=True)
+
+  num_classes = len(trn_ds.labels_map)
+
+  it = tf.data.Iterator.from_structure(
+    trn_ds.dataset.output_types, trn_ds.dataset.output_shapes)
+
+  num_train_batches = int(math.ceil(float(trn_ds.size) / args.batch_size))
+  num_val_batches = int(math.ceil(float(val_ds.size) / args.batch_size))
+
+  trn_init_op = it.make_initializer(trn_ds.dataset)
+  val_init_op = it.make_initializer(val_ds.dataset)
+  tst_init_op = it.make_initializer(tst_ds.dataset)
+
+  # Filename, input image and corrsponding one hot encoded label
+  f, x, y = it.get_next()
+
+  sess = tf.Session()
+
+  # Model and logits
+  is_training = tf.placeholder(dtype=tf.bool)
+  model = InceptionV3(nb_classes=num_classes, is_training=is_training)
+  logits = model.get_logits(x)
+
+  attacks_ord = {
+    'inf': np.inf,
+    '1': 1,
+    '2': 2
+  }
+
+  # FGM attack
+  attack_params = {
+    'eps': args.eps,
+    'clip_min': 0.0,
+    'clip_max': 1.0,
+    'ord': attacks_ord[args.ord],
+  }
+  attack = FastGradientMethod(model, sess)
+
+  # Learning rate with exponential decay
+  global_step = tf.Variable(0, trainable=False)
+  global_step_update_op = tf.add(global_step, 1)
+  lr = tf.train.exponential_decay(
+    args.initial_lr, global_step, args.lr_decay_steps,
+    args.lr_decay_factor ,staircase=True)
+
+  loss = CrossEntropy(model, attack=attack, smoothing=args.label_smth,
+                      attack_params=attack_params)
+
+  # Gradients clipping
+  opt = tf.train.RMSPropOptimizer(learning_rate=lr, decay=args.opt_decay,
+                                  epsilon=1.0)
+  gvs = opt.compute_gradients(loss)
+  capped_gvs = [(tf.clip_by_value(grad, -args.grad_clip, args.grad_clip), var)
+                for grad, var in gvs]
+  train_op = opt.apply_gradients(capped_gvs)
+
+  saver = tf.train.Saver()
+  with sess.as_default():
+    sess.run(tf.global_variables_initializer())
+
+    best_val_acc = -1
+    for epoch in range(args.num_epochs):
+      logger.info("Epoch: {:04d}/{:04d}".format(epoch + 1, args.num_epochs))
+      sess.run(trn_init_op)
+
+      for batch in range(num_train_batches):
+        loss_np, lr_np, _ = sess.run([loss, lr, train_op],
+                                     feed_dict={is_training: True})
+        logger.info("Batch: {:04d}/{:04d}, loss: {:.05f}, lr: {:.05f}"
+          .format(batch+1, args.num_batches, loss_np, lr_np))
+
+      logger.info("Epoch completed...")
+
+      sess.run(global_step_update_op)
+      val_acc = eval_acc(sess, logits, y, num_val_batches,
+                         is_training, val_init_op)
+      logger.info("Validation set accuracy: {:.05f}".format(val_acc))
+
+      if best_val_acc < val_acc:
+        output_path = saver.save(sess, args.model_path)
+        logger.info("Model was successfully saved: {}".format(output_path))
+        best_val_acc = val_acc
+        pass
+
+    tst_acc = eval_acc(sess, logits, y, num_val_batches,
+                       is_training, tst_init_op)
+    logger.info("Test set accuracy: {:.05f}".format(tst_acc))
+
+
+if __name__ == '__main__':
+  tf.set_random_seed(2019)
+
+  parser = argparse.ArgumentParser()
+
+  parser.add_argument('--run-name', required=True)
+  parser.add_argument('--train-dir', required=True)
+  parser.add_argument('--val-dir', required=True)
+  parser.add_argument('--test-dir', required=True)
+  parser.add_argument('--model-path', required=True)
+  parser.add_argument('--batch-size', default=64)
+  parser.add_argument('--num-epochs', default=100)
+  parser.add_argument('--initial-lr', default=0.045)
+  parser.add_argument('--lr-decay-factor', default=0.94)
+  parser.add_argument('--lr-decay-steps', default=2)
+  parser.add_argument('--opt-decay', default=0.9)
+  parser.add_argument('--grad-clip', default=2.0)
+  parser.add_argument('--label-smth', default=True)
+  parser.add_argument('--adv-coeff', default=0.5)
+  parser.add_argument('--device', choices=['0', '1', '2'])
+  parser.add_argument('--eps', default=0.0784)
+  parser.add_argument('--ord', choices=['inf', '1', '2'])
+
+  args = parser.parse_args()
+
+  os.environ['CUDA_VISIBLE_DEVICES'] = args.device
+
+  main(args)
