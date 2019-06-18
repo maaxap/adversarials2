@@ -111,3 +111,7 @@ data/*
 models/*
 
 nohup.out
+dataset
+predictions/
+runner.sh
+

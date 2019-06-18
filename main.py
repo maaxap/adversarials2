@@ -33,7 +33,7 @@ DEFAULT_ACCURACY_DELTA = 1e-5
 # Attack parameters
 DEFAULT_ADV_DIR = '/home/maaxap/data/hist/adv'
 DEFAULT_ATTACK_BATCH_SIZE = 128
-DEAFULT_EPS = 20. / 255
+DEAFULT_EPS = 60. / 255
 DEFAULT_NUM_ITER = 20
 # DEFAULT_EPS_ITER = 1. / 255
 # DEFAULT_DECAY_FACTOR = 0.9
@@ -83,51 +83,6 @@ def main(args, logger):
   ord = np.inf
 
   attack_param_grid = {
-    MomentumIterativeMethod: {
-      'adv_dir': join(adv_dir, 'momentum'),
-      'init_op': dataset_init_op,
-      'nb_batches': num_batches,
-      'logger': logger,
-      'clip_min': 0.0,
-      'clip_max': 1.0,
-      'nb_iter': nb_iter,
-      'eps_iter': eps_iter,
-      'ord': ord,
-      'y': y,
-
-
-      'eps': eps,
-      'gamma': 0.9
-    },
-    NesterovIterativeMethod: {
-      'adv_dir': join(adv_dir, 'nesterov'),
-      'init_op': dataset_init_op,
-      'nb_batches': num_batches,
-      'logger': logger,
-      'clip_min': 0.0,
-      'clip_max': 1.0,
-      'nb_iter': nb_iter,
-      'eps_iter': eps_iter,
-      'ord': ord,
-      'y': y,
-
-      'eps': eps,
-      'gamma': 0.9
-    },
-    AdagradIterativeMethod: {
-      'adv_dir': join(adv_dir, 'adagrad'),
-      'init_op': dataset_init_op,
-      'nb_batches': num_batches,
-      'logger': logger,
-      'clip_min': 0.0,
-      'clip_max': 1.0,
-      'nb_iter': nb_iter,
-      'eps_iter': eps_iter,
-      'ord': ord,
-      'y': y,
-
-      'eps': eps,
-    },
     AdadeltaIterativeMethod: {
       'adv_dir': join(adv_dir, 'adadelta'),
       'init_op': dataset_init_op,
@@ -142,39 +97,6 @@ def main(args, logger):
 
       'eps': eps,
       'gamma': 0.9
-    },
-
-    RMSPropIterativeMethod: {
-      'adv_dir': join(adv_dir, 'rmsprop'),
-      'init_op': dataset_init_op,
-      'nb_batches': num_batches,
-      'logger': logger,
-      'clip_min': 0.0,
-      'clip_max': 1.0,
-      'nb_iter': nb_iter,
-      'eps_iter': eps_iter,
-      'ord': ord,
-      'y': y,
-
-      'eps': eps,
-      'gamma': 0.9
-    },
-
-    AdamIterativeMethod: {
-      'adv_dir': join(adv_dir, 'adam'),
-      'init_op': dataset_init_op,
-      'nb_batches': num_batches,
-      'logger': logger,
-      'clip_min': 0.0,
-      'clip_max': 1.0,
-      'nb_iter': nb_iter,
-      'eps_iter': eps_iter,
-      'ord': ord,
-      'y': y,
-
-      'eps': eps,
-      'betha1': 0.9,
-      'betha2': 0.99
     },
   }
 
@@ -192,7 +114,7 @@ def main(args, logger):
 if __name__ == '__main__':
   tf.set_random_seed(2019)
 
-  logger = init_logger("adversarials")
+  logger = init_logger("adversarials-2dadelta")
 
   parser = argparse.ArgumentParser()
 

@@ -29,13 +29,15 @@ class Dataset(object):
         flat_images_list.append(filepath)
         flat_labels_list.append(label)
 
-    # flat_images_list = np.array(flat_images_list)
-    # flat_labels_list = np.array(flat_labels_list)
+    self.filenames = flat_images_list
+    self.labels = flat_labels_list
+    self.size = len(flat_images_list)
+    self.labels_map = labels_map
+    self.is_shuffled = False
+    self.batch_size = None
 
     self.dataset = tf.data.Dataset.from_tensor_slices(
       (flat_images_list, flat_labels_list))
-    self.size = len(flat_images_list)
-    self.labels_map = labels_map
 
 
 def make_dataset(datadir, batch_size, preprocess_func=None,
@@ -53,8 +55,10 @@ def make_dataset(datadir, batch_size, preprocess_func=None,
   dataset.dataset = dataset.dataset.map(labels_to_one_hot)
 
   if shuffle is True:
+    dataset.is_shuffled = True
     dataset.dataset = dataset.dataset.shuffle(buffer_size=10000)
 
+  dataset.batch_size = batch_size
   dataset.dataset = dataset.dataset.batch(batch_size)
 
   if repeat is True:
