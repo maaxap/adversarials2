@@ -7,7 +7,7 @@ from PIL import Image
 
 class Dataset(object):
 
-  def __init__(self, data_directory):
+  def __init__(self, data_directory, add_filenames=False):
     assert os.path.isdir(data_directory), ("`data_directory` expected "
                                            "to be a directory")
 
@@ -29,18 +29,24 @@ class Dataset(object):
         flat_images_list.append(filepath)
         flat_labels_list.append(label)
 
-    # flat_images_list = np.array(flat_images_list)
-    # flat_labels_list = np.array(flat_labels_list)
-
-    self.dataset = tf.data.Dataset.from_tensor_slices(
-      (flat_images_list, flat_labels_list))
+    self.filenames = flat_images_list
+    self.labels = flat_labels_list
     self.size = len(flat_images_list)
     self.labels_map = labels_map
+    self.is_shuffled = False
+    self.batch_size = None
+
+    if add_filenames:
+      self.dataset = tf.data.Dataset.from_tensor_slices(
+        (flat_images_list, flat_images_list, flat_labels_list))
+    else:
+      self.dataset = tf.data.Dataset.from_tensor_slices(
+        (flat_images_list, flat_labels_list))
 
 
 def make_dataset(datadir, batch_size, preprocess_func=None,
-                 shuffle=False, repeat=False):
-  dataset = Dataset(datadir)
+                 shuffle=False, repeat=False, add_filenames=False):
+  dataset = Dataset(datadir, add_filenames=add_filenames)
 
   # Apply preprocess function to image paths
   if preprocess_func:
@@ -53,8 +59,10 @@ def make_dataset(datadir, batch_size, preprocess_func=None,
   dataset.dataset = dataset.dataset.map(labels_to_one_hot)
 
   if shuffle is True:
+    dataset.is_shuffled = True
     dataset.dataset = dataset.dataset.shuffle(buffer_size=10000)
 
+  dataset.batch_size = batch_size
   dataset.dataset = dataset.dataset.batch(batch_size)
 
   if repeat is True:
