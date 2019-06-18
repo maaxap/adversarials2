@@ -94,7 +94,8 @@ def main(args):
 
   cross_entropy = CrossEntropy(model, attack=attack,
                                smoothing=args.label_smth,
-                               attack_params=attack_params)
+                               attack_params=attack_params,
+                               adv_coeff=args.adv_coeff)
   loss = cross_entropy.fprop(x, y)
 
   # Gradients clipping
