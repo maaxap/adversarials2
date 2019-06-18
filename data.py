@@ -7,7 +7,7 @@ from PIL import Image
 
 class Dataset(object):
 
-  def __init__(self, data_directory):
+  def __init__(self, data_directory, add_filenames=False):
     assert os.path.isdir(data_directory), ("`data_directory` expected "
                                            "to be a directory")
 
@@ -36,13 +36,17 @@ class Dataset(object):
     self.is_shuffled = False
     self.batch_size = None
 
-    self.dataset = tf.data.Dataset.from_tensor_slices(
-      (flat_images_list, flat_labels_list))
+    if add_filenames:
+      self.dataset = tf.data.Dataset.from_tensor_slices(
+        (flat_images_list, flat_images_list, flat_labels_list))
+    else:
+      self.dataset = tf.data.Dataset.from_tensor_slices(
+        (flat_images_list, flat_labels_list))
 
 
 def make_dataset(datadir, batch_size, preprocess_func=None,
-                 shuffle=False, repeat=False):
-  dataset = Dataset(datadir)
+                 shuffle=False, repeat=False, add_filenames=False):
+  dataset = Dataset(datadir, add_filenames=add_filenames)
 
   # Apply preprocess function to image paths
   if preprocess_func:
