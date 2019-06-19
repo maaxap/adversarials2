@@ -115,6 +115,10 @@ def main(args):
   saver = tf.train.Saver()
   global_init_op = tf.global_variables_initializer()
 
+  if args.load_model and args.restore_path:
+    saver.restore(sess, args.restore_path)
+    logger.info("Model restored from: ".format(args.restore_path))
+
 
   with sess.as_default():
     sess.run(global_init_op)
@@ -158,6 +162,8 @@ if __name__ == '__main__':
   parser.add_argument('--val-dir', required=True, type=str)
   parser.add_argument('--test-dir', required=True, type=str)
   parser.add_argument('--model-path', required=True, type=str)
+  parser.add_argument('--restore-model', default=False, action='store_true')
+  parser.add_argument('--restore-path', default=None, type=str)
   parser.add_argument('--batch-size', default=64, type=int)
   parser.add_argument('--num-epochs', default=100, type=int)
   parser.add_argument('--initial-lr', default=0.045, type=float)
