@@ -18,9 +18,9 @@ from cleverhans.attacks.fast_gradient_method import FastGradientMethod
 
 
 # Common parameters
-DEFAULT_TRAIN_DIR = '/home/maaxap/Workspace/Data/Histology_CAMELYON16_300K_Tiles/train'
-DEFAULT_VAL_DIR = '/home/maaxap/Workspace/Data/Histology_CAMELYON16_300K_Tiles/val'
-DEFAULT_TEST_DIR = '/home/maaxap/Workspace/Data/Histology_CAMELYON16_300K_Tiles/test'
+DEFAULT_TRAIN_DIR = '/path/to/train'
+DEFAULT_VAL_DIR = '/path/to/val'
+DEFAULT_TEST_DIR = '/path/to/test'
 DEFAULT_CHECKPOINT_PATH = 'models/vgg/vgg19_model_v2.ckpt'
 
 # Train parameters
@@ -31,7 +31,7 @@ DEFAULT_LEARNING_RATE_DECAY = 1e-1
 DEFAULT_ACCURACY_DELTA = 1e-5
 
 # Attack parameters
-DEFAULT_ADV_DIR = '/home/maaxap/data/hist/adv'
+DEFAULT_ADV_DIR = '/path/to/data/hist/adv'
 DEFAULT_ATTACK_BATCH_SIZE = 128
 DEAFULT_EPS = 60. / 255
 DEFAULT_NUM_ITER = 20
